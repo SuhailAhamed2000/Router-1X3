@@ -1,0 +1,74 @@
+module router_fifo(clock,resetn,wrenb,rdenb,soft_rst,datain,lfd_state,empty,full,dataout);
+  input clock,resetn,wrenb,rdenb,soft_rst,lfd_state;
+  input[7:0]datain;
+  output empty,full;
+  output reg [7:0]dataout;
+  reg [4:0]wrptr,rdptr;
+  reg temp_lfd;
+  reg [6:0]count;
+  reg[8:0]mem[15:0];
+  integer i;
+  assign full=(wrptr ==({~rdptr[4],rdptr[3:0]}));
+  assign empty=(rdptr == wrptr);
+  always @(posedge clock)
+    begin
+      if(!resetn)
+        temp_lfd<=0;
+      else
+        temp_lfd<=lfd_state;
+    end
+  always @(posedge clock)
+    begin
+    if(!resetn)
+      dataout<=8'b0;
+  else if(soft_rst)
+    dataout<=8'bz;
+  else if((rdenb) && (!empty))
+    dataout<=mem [rdptr[3:0]][7:0];
+  else if(count==0)
+    dataout<=8'bz;
+  end
+  always @(posedge clock)
+    if(!resetn || soft_rst)
+      begin
+        for(i=0;i<16;i=i+1)
+          mem[i]=0;
+      end
+  else if((wrenb) && (!full))
+    begin
+      if(temp_lfd)
+        begin
+          mem[wrptr[3:0]][8]<=1'b1;
+          mem[wrptr[3:0]][7:0]<=datain;
+        end
+      else
+         begin
+           mem[wrptr[3:0]][8]<=1'b0;
+          mem[wrptr[3:0]][7:0]<=datain;
+        end
+    end
+  always @(posedge clock)
+    begin
+      if(!resetn)
+        wrptr<=0;
+       else if((wrenb) && (!full))
+         wrptr<=wrptr+1;
+    end
+  always @(posedge clock)
+    begin
+      if(!resetn)
+        rdptr<=0;
+       else if((rdenb) && (!empty))
+         rdptr<=rdptr+1;
+    end
+  always @(posedge clock)
+    begin
+      if((rdenb) && (!empty))
+        begin
+          if( mem[rdptr[3:0]][8] == 1'b1)
+            count<=mem[rdptr[3:0]][7:2]+1'b1;
+          else if(count != 0)
+            count<=count-1'b1;
+        end
+    end
+endmodule
