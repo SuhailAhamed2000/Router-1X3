@@ -1,0 +1,28 @@
+/********************************************************************************************
+NAME       :SUHAIL AHAMED S
+DESIGN NAME:ROUTER 1X3
+DATE       :26/08/2021
+DESCRIPTION:ROUTER TOP MODEL
+*********************************************************************************************/
+module router_top(clock,resetn,pktvalid,datain,rdenb0,rdenb1,rdenb2,dataout0,dataout1,dataout2,vldout0,vldout1,vldout2,err,busy);
+  input clock,resetn,pktvalid;
+  input [7:0]datain;
+  input rdenb0,rdenb1,rdenb2;
+  output [7:0]dataout0,dataout1,dataout2;
+  output vldout0,vldout1,vldout2;
+  output err,busy;
+  wire [2:0]wrenb;
+  wire [2:0]soft_rst;
+  wire [2:0]rdenb; 
+  wire [2:0]empty;
+  wire [2:0]full;
+  wire lfd_state;
+  wire [7:0]dout;
+  wire detect_add,paritydone,ld_state,laf_state,low_pktvalid,full_state,fifo_full,rst_int_reg,wr_enb_reg;
+  router_fifo b(.clock(clock),.resetn(resetn),.wrenb(wrenb[0]),.rdenb(rdenb0),.soft_rst(soft_rst[0]),.datain(dout),.lfd_state(lfd_state),.empty(empty[0]),.full(full[0]),.dataout(dataout0));
+  router_fifo c(.clock(clock),.resetn(resetn),.wrenb(wrenb[1]),.rdenb(rdenb1),.soft_rst(soft_rst[1]),.datain(dout),.lfd_state(lfd_state),.empty(empty[1]),.full(full[1]),.dataout(dataout1));
+  router_fifo d(.clock(clock),.resetn(resetn),.wrenb(wrenb[2]),.rdenb(rdenb2),.soft_rst(soft_rst[2]),.datain(dout),.lfd_state(lfd_state),.empty(empty[2]),.full(full[2]),.dataout(dataout2));
+  router_sync e(.clock(clock),.resetn(resetn),.detect_add(detect_add),.datain(datain[1:0]),.wrenb_reg(wr_enb_reg),.vldout0(vldout0),.vldout1(vldout1),.vldout2(vldout2),.rdenb0(rdenb0),.rdenb1(rdenb1),.rdenb2(rdenb2),.wrenb(wrenb[2:0]),.fifo_full(fifo_full),.empty0(empty[0]),.empty1(empty[1]),.empty2(empty[2]),.full0(full[0]),.full1(full[1]),.full2(full[2]),.softrst0(soft_rst[0]),.softrst1(soft_rst[1]),.softrst2(soft_rst[2]));
+  router_fsm f(.clock(clock),.resetn(resetn),.pktvalid(pktvalid),.paritydone(paritydone),.datain(datain[1:0]),.softrst0(soft_rst[0]),.softrst1(soft_rst[1]),.softrst2(soft_rst[2]),.fifo_full(fifo_full),.low_pktvalid(low_pktvalid),.fifo_empty0(empty[0]),.fifo_empty1(empty[1]),.fifo_empty2(empty[2]),.busy(busy),.detect_add(detect_add),.ld_state(ld_state),.laf_state(laf_state),.full_state(full_state),.wr_enb_reg(wr_enb_reg),.rst_int_reg(rst_int_reg),.lfd_state(lfd_state));
+  router_register g(.clock(clock),.resetn(resetn),.pktvalid(pktvalid),.datain(datain),.fifo_full(fifo_full),.rst_int_reg(rst_int_reg),.detect_add(detect_add),.ld_state(ld_state),.laf_state(laf_state),.full_state(full_state),.lfd_state(lfd_state),.parity_done(paritydone),.low_pktvalid(low_pktvalid),.err(err),.dout(dout));
+endmodule
