@@ -1,0 +1,114 @@
+/********************************************************************************************
+NAME       :SUHAIL AHAMED S
+DESIGN NAME:ROUTER 1X3
+DATE       :24/08/2021
+DESCRIPTION:REGISTER TB
+*********************************************************************************************/
+module router_register_tb();
+ reg clock,resetn,pktvalid;
+ reg [7:0]datain;
+ reg fifo_full,rst_int_reg,detect_add,ld_state,laf_state,full_state,lfd_state;
+  wire parity_done,low_pktvalid,err;
+  wire [7:0]dout;
+  reg [7:0]header_byte,fifo_full_state_byte,internal_parity,packet_parity_byte;
+integer i;
+router_register a(clock,resetn,pktvalid,datain,fifo_full,rst_int_reg,detect_add,ld_state,laf_state,full_state,lfd_state,parity_done,low_pktvalid,err,dout);
+ initial
+    begin
+      clock=0;
+      forever #10 clock=~clock;
+    end
+  initial
+    begin
+      $dumpfile("router_register_tb.vcd");
+      $dumpvars(0,router_register_tb);
+    end
+task rst();
+  begin
+    resetn=1'b1;
+    @(negedge clock)
+    resetn=1'b0;
+    @(negedge clock)
+    resetn=1'b1;
+  end
+endtask
+  task good_pkt_gen();
+    reg[7:0]payload_data,header1,parity1;
+	reg[5:0]payload_len;
+  reg[1:0]addr;
+   begin
+     @(negedge clock)
+     payload_len=6'd12;
+     addr=2'b10;
+     pktvalid=1;
+     detect_add=1;
+     header1={payload_len,addr};
+     parity1=0^header1;
+     datain=header1;
+     @(negedge clock)
+     detect_add=0;
+     lfd_state=1;
+     full_state=0;
+     fifo_full=0;
+     laf_state=0;
+     for(i=0;i<payload_len;i=i+1)
+       begin
+         @(negedge clock)
+         lfd_state=0;
+         ld_state=1;
+         payload_data={$random}%256;
+  datain=payload_data;
+  parity1=parity1^datain;
+       end
+     @(negedge clock)
+      pktvalid=0;
+ datain=parity1;
+ @(negedge clock);
+ ld_state=0; 
+   end
+endtask
+  task bad_pkt_gen();
+    reg[7:0]payload_data,header1,parity1;
+	reg[5:0]payload_len;
+  reg[1:0]addr;
+   begin
+     @(negedge clock)
+     payload_len=6'd12;
+     addr=2'b10;
+     pktvalid=1;
+     detect_add=1;
+     header1={payload_len,addr};
+     parity1=0^header1;
+     datain=header1;
+     @(negedge clock)
+     detect_add=0;
+     lfd_state=1;
+     full_state=0;
+     fifo_full=0;
+     laf_state=0;
+     for(i=0;i<payload_len;i=i+1)
+       begin
+         @(negedge clock)
+         lfd_state=0;
+         ld_state=1;
+         payload_data={$random}%256;
+  datain=payload_data;
+  parity1=parity1^datain;
+       end
+     @(negedge clock)
+      pktvalid=0;
+ datain=58;
+ @(negedge clock);
+ ld_state=0; 
+   end
+endtask
+initial
+  begin
+    rst;
+    good_pkt_gen;
+    rst;
+    #50;
+    bad_pkt_gen;
+    #300 $finish;
+  end
+endmodule
