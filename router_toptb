@@ -1,0 +1,195 @@
+/********************************************************************************************
+NAME       :SUHAIL AHAMED S
+DESIGN NAME:ROUTER 1X3
+DATE       :26/08/2021
+DESCRIPTION:ROUTER TOP MODEL TESEBENCH
+*********************************************************************************************/
+module router_top_tb();
+  reg clock,resetn,pktvalid;
+  reg [7:0]datain;
+  reg rdenb0,rdenb1,rdenb2;
+  wire [7:0]dataout0,dataout1,dataout2;
+  wire vldout0,vldout1,vldout2;
+  wire err,busy;
+  wire [2:0]wrenb;
+  wire [2:0]soft_rst;
+  wire [2:0]rdenb; 
+  wire [2:0]empty;
+  wire [2:0]full;
+  wire lfd_state;
+  wire [7:0]dout;
+  
+  integer i;
+  router_top a(clock,resetn,pktvalid,datain,rdenb0,rdenb1,rdenb2,dataout0,dataout1,dataout2,vldout0,vldout1,vldout2,err,busy);
+  initial
+    begin
+      clock=0;
+      forever #10 clock=~clock;
+    end
+  initial
+    begin
+      $dumpfile("router_top_tb.vcd");
+      $dumpvars(0,router_top_tb);
+    end
+  task initialize();
+    begin
+      {pktvalid,rdenb0,rdenb1,rdenb2,datain}=0;
+      
+    end
+  endtask
+  task rst();
+      begin
+         resetn=1'b1;
+        @(negedge clock)
+        resetn=1'b0;
+        @(negedge clock)
+        resetn=1'b1;
+      end
+  endtask
+  task pktm_gen_8;	// packet generation payload 8
+			reg [7:0]header, payload_data, parity;
+			reg [8:0]payloadlen;
+			
+			begin
+				parity=0;
+				wait(!busy)
+				begin
+                  @(negedge clock);
+				payloadlen=8;
+				pktvalid=1'b1;
+				header={payloadlen,2'b10};
+				datain=header;
+				parity=parity^datain;
+				end
+              @(negedge clock);
+							
+				for(i=0;i<payloadlen;i=i+1)
+					begin
+					wait(!busy)
+                    begin  
+                      @(negedge clock);
+					payload_data={$random}%256;
+					datain=payload_data;
+					parity=parity^datain;
+                    end  
+					end					
+								
+              wait(!busy)
+                    begin
+                      @(negedge clock);
+					pktvalid=0;		
+					datain=parity;
+                    end  
+              repeat(2)
+                @(negedge clock);
+			rdenb2=1;
+              
+              wait(a.d.empty)
+              @(negedge clock);
+           rdenb2=0;
+			end
+      
+endtask
+	
+	  task pktm_gen_14;
+			reg [7:0]header, payload_data, parity;
+			reg [8:0]payloadlen;
+			
+			begin
+				parity=0;
+				wait(!busy)
+				begin
+                  @(negedge clock);
+				payloadlen=14;
+				pktvalid=1'b1;
+				header={payloadlen,2'b01};
+				datain=header;
+				parity=parity^datain;
+				end
+              @(negedge clock);
+							
+				for(i=0;i<payloadlen;i=i+1)
+					begin
+					wait(!busy)
+                    begin  
+                      @(negedge clock);
+					payload_data={$random}%256;
+					datain=payload_data;
+					parity=parity^datain;
+                    end  
+					end					
+								
+              wait(!busy)
+                    begin
+                      @(negedge clock);
+					pktvalid=0;		
+					datain=parity;
+                    end  
+              repeat(2)
+                @(negedge clock);
+			rdenb1=1;
+              
+              wait(a.c.empty)
+              @(negedge clock);
+           rdenb1=0;
+			end
+      
+endtask
+task pktm_gen_16;
+			reg [7:0]header, payload_data, parity;
+			reg [8:0]payloadlen;
+			
+			begin
+				parity=0;
+				wait(!busy)
+				begin
+                  @(negedge clock);
+				payloadlen=16;
+				pktvalid=1'b1;
+				header={payloadlen,2'b00};
+				datain=header;
+				parity=parity^datain;
+				end
+              @(negedge clock);
+							
+				for(i=0;i<payloadlen;i=i+1)
+					begin
+					wait(!busy)
+                    begin  
+                      @(negedge clock);
+					payload_data={$random}%256;
+					datain=payload_data;
+					parity=parity^datain;
+                    end  
+					end					
+								
+              wait(!busy)
+                    begin
+                      @(negedge clock);
+					pktvalid=0;		
+					datain=parity;
+                    end  
+              repeat(2)
+                @(negedge clock);
+			rdenb0=1;
+              
+              wait(a.b.empty)
+              @(negedge clock);
+           rdenb0=0;
+			end
+      
+endtask
+	
+ initial
+    begin
+      initialize;
+      rst();
+      pktm_gen_8;
+      #50;
+      pktm_gen_14;
+      #50;
+      pktm_gen_16;
+
+      #500 $finish;
+    end
+endmodule
