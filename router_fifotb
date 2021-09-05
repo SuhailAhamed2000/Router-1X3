@@ -1,0 +1,100 @@
+/********************************************************************************************
+NAME       :SUHAIL AHAMED S
+DESIGN NAME:ROUTER 1X3
+DATE       :21/07/2021
+DESCRIPTION:FIFO TB
+*********************************************************************************************/
+module router_fifo_tb();
+  reg clock,resetn,wrenb,rdenb,soft_rst,lfd_state;
+  reg[7:0]datain;
+  wire empty,full;
+  wire  [7:0]dataout;
+  integer i;
+  reg [7:0]header,parity;
+  reg [1:0]addr;
+  router_fifo a(clock,resetn,wrenb,rdenb,soft_rst,datain,lfd_state,empty,full,dataout);
+  initial
+    begin
+      clock=0;
+      forever #10 clock=~clock;
+    end
+  initial
+    begin
+      $dumpfile("router_fifo_tb.vcd");
+      $dumpvars(0,router_fifo_tb);
+    end
+  task rst();
+      begin
+         resetn=1'b1;
+        @(negedge clock)
+        resetn=1'b0;
+        @(negedge clock)
+        resetn=1'b1;
+      end
+  endtask
+  task sftrst();
+      begin
+          soft_rst=1'b0;
+        @(negedge clock)
+        soft_rst=1'b1;
+        @(negedge clock)
+        soft_rst=1'b0;
+      end
+  endtask
+    task initialize();
+        begin
+     wrenb=1'b0;
+     soft_rst=1'b0;
+     rdenb=1'b0;
+     datain=0;
+    lfd_state=1'b0;
+        end
+    endtask
+    task pkt_gen();
+	reg[7:0]payload_data;
+	reg[5:0]payload_len;
+     begin
+     @(negedge clock);
+     payload_len=6'd14;
+     addr=2'b01;
+     header={payload_len,addr};
+     datain=header;
+     lfd_state=1'b1; wrenb=1;
+     
+     for(i=0;i<payload_len;i=i+1)
+
+     begin
+    
+     @(negedge clock);
+     lfd_state = 0;
+     payload_data={$random}%256;
+     datain=payload_data;
+     end
+   
+     @(negedge clock);
+     parity={$random}%256;
+     datain=parity;
+     end
+
+endtask
+    initial
+      begin
+        initialize();
+        rst();
+
+        sftrst();
+        pkt_gen();
+
+repeat(2)
+@(negedge clock);
+rdenb=1;
+wrenb=0;
+@(negedge clock)
+wait(empty)
+@(negedge clock)
+rdenb=0;
+
+#100 $finish;
+end
+    
+endmodule
