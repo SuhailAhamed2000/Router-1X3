@@ -1,0 +1,147 @@
+/********************************************************************************************
+NAME       :SUHAIL AHAMED S
+DESIGN NAME:ROUTER 1X3
+DATE       :23/08/2021
+DESCRIPTION:FSM TB
+*********************************************************************************************/
+module router_fsm_tb();
+   reg clock,resetn,pktvalid,paritydone,low_pktvalid;
+  reg [1:0]datain;
+  reg softrst0,softrst1,softrst2;
+  reg fifo_empty0,fifo_empty1,fifo_empty2;
+  reg fifo_full;
+  wire busy;
+  wire detect_add,ld_state,laf_state,full_state,lfd_state;
+  wire  rst_int_reg;
+  wire  wr_enb_reg;
+   parameter decode_address=3'b000,
+            load_first_data=3'b001,
+            wait_till_empty=3'b010,
+            load_data=3'b011,
+            fifo_full_state=3'b100,
+            load_parity=3'b101,
+            check_parity_error=3'b110,
+            load_after_full=3'b111;
+  reg [3*8:0]string_cmd;
+  reg [2:0]present_state,next_state;
+  router_fsm a(clock,resetn,pktvalid,paritydone,datain,softrst0,softrst1,softrst2,fifo_full,low_pktvalid,fifo_empty0,fifo_empty1,fifo_empty2,busy,detect_add,ld_state,laf_state,full_state,wr_enb_reg,rst_int_reg,lfd_state);
+  initial
+    begin
+      clock=0;
+      forever #10 clock=~clock;
+    end
+  initial
+    begin
+      $dumpfile("router_fsm_tb.vcd");
+      $dumpvars(0,router_fsm_tb);
+    end
+  task rst();
+      begin
+         resetn=1'b1;
+        @(negedge clock)
+        resetn=1'b0;
+        @(negedge clock)
+        resetn=1'b1;
+      end
+  endtask
+  task t1();
+    begin
+      @(negedge clock) //lfd
+      pktvalid<=1;
+      datain<=1;
+      fifo_empty1=1;
+      @(negedge clock)
+      @(negedge clock)
+      fifo_full<=0;
+      pktvalid<=0;
+      @(negedge clock)
+       @(negedge clock)
+      fifo_full<=0;
+   end
+  endtask
+  task t2();
+    begin
+       @(negedge clock)
+      pktvalid<=1;
+      datain<=2;
+      fifo_empty2<=1;
+      @(negedge clock)
+      @(negedge clock)
+      fifo_full<=1;
+       @(negedge clock)
+      fifo_full<=0;
+       @(negedge clock)
+      paritydone<=0;
+      low_pktvalid<=1;
+       @(negedge clock)
+       @(negedge clock)
+      fifo_full<=0;
+    end
+  endtask
+   task t3();
+    begin
+       @(negedge clock)
+      pktvalid<=1;
+      datain<=0;
+      fifo_empty1<=1;
+      @(negedge clock)
+      @(negedge clock)
+      fifo_full<=1;
+       @(negedge clock)
+      fifo_full<=0;
+       @(negedge clock)
+      paritydone<=0;
+      low_pktvalid<=0;
+       @(negedge clock)
+      fifo_full<=0;
+      pktvalid<=0;
+       @(negedge clock)
+       @(negedge clock)
+      fifo_full<=0;
+    end
+  endtask
+  task t4();
+      begin
+         @(negedge clock)
+      pktvalid<=1;
+      datain<=1;
+      fifo_empty1<=1;
+      @(negedge clock)
+      @(negedge clock)
+      fifo_full<=0;
+      pktvalid<=0;
+      @(negedge clock)
+       @(negedge clock)
+      fifo_full<=1;
+        @(negedge clock)
+        fifo_full<=0;
+        @(negedge clock)
+        paritydone<=1;
+      end
+  endtask
+  initial
+    begin
+      rst;
+      t1;
+    #50
+      t2;
+    #50
+    t3;
+    #40
+    t4;
+      #500 $finish;
+    end
+  always @(a.present_state)
+    begin
+      case(a.present_state)
+            decode_address:string_cmd="da";
+            load_first_data:string_cmd="lfd";
+            wait_till_empty:string_cmd="wte";
+            load_data:string_cmd="ld";
+            fifo_full_state:string_cmd="ffs";
+            load_parity:string_cmd="lp";
+        check_parity_error:string_cmd="cpe";
+            load_after_full:string_cmd="laf";
+      endcase
+    end
+endmodule
