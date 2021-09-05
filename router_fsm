@@ -1,0 +1,102 @@
+/********************************************************************************************
+NAME       :SUHAIL AHAMED S
+DESIGN NAME:ROUTER 1X3
+DATE       :23/08/2021
+DESCRIPTION:FSM
+*********************************************************************************************/
+module router_fsm(clock,resetn,pktvalid,paritydone,datain,softrst0,softrst1,softrst2,fifo_full,low_pktvalid,fifo_empty0,fifo_empty1,fifo_empty2,busy,detect_add,ld_state,laf_state,full_state,wr_enb_reg,rst_int_reg,lfd_state);
+  input clock,resetn,pktvalid,paritydone,low_pktvalid;
+  input [1:0]datain;
+  input softrst0,softrst1,softrst2;
+  input fifo_empty0,fifo_empty1,fifo_empty2;
+  input fifo_full;
+  output busy;
+  output detect_add,ld_state,laf_state,full_state,lfd_state;
+  output  rst_int_reg;
+  output  wr_enb_reg;
+  parameter decode_address=3'b000,
+            load_first_data=3'b001,
+            wait_till_empty=3'b010,
+            load_data=3'b011,
+            fifo_full_state=3'b100,
+            load_parity=3'b101,
+            check_parity_error=3'b110,
+            load_after_full=3'b111;
+  reg [2:0]present_state,next_state;
+  always @(posedge clock)
+  begin
+    if(!resetn)
+      present_state<=decode_address;
+    else if(softrst0 || softrst1 || softrst2)
+       present_state<=decode_address;
+    else
+      present_state<=next_state;
+  end
+  always @(*)
+    begin
+    next_state=decode_address;
+  case(present_state)
+    decode_address:
+      begin
+        if(((pktvalid)&&(datain==0)&&(!fifo_empty0))||((pktvalid)&&(datain==1)&&(!fifo_empty1))||((pktvalid)&&(datain==2)&&(!fifo_empty2)))
+    next_state=wait_till_empty;
+        else if(((pktvalid)&&(datain==0)&&(fifo_empty0))||((pktvalid)&&(datain==1)&&(fifo_empty1))||((pktvalid)&&(datain==2)&&(fifo_empty2)))
+    next_state=load_first_data;
+    else
+      next_state=decode_address;
+      end
+    load_first_data:next_state=load_data;
+    wait_till_empty:
+      begin
+      if((fifo_empty0)|| (fifo_empty1)||(fifo_empty2))
+    next_state=load_first_data;
+    else if((!fifo_empty0)||(!fifo_empty1)||(!fifo_empty2))
+           next_state=wait_till_empty;
+    
+    else
+       next_state=wait_till_empty;
+    end
+    load_data:
+      begin
+      if(fifo_full)
+      next_state=fifo_full_state;
+    else if(!fifo_full && !pktvalid)
+      next_state=load_parity;
+    else
+      next_state=load_data;
+      end
+    fifo_full_state:
+      begin
+      if(!fifo_full)
+      next_state=load_after_full;
+    else if (fifo_full)
+    next_state=fifo_full_state;
+      end
+    load_after_full:
+      begin
+      if(paritydone)
+      next_state=decode_address;
+    else if(!paritydone && low_pktvalid)
+      next_state=load_parity;
+        else if(!paritydone && !low_pktvalid)
+      next_state=load_data;
+      end
+    load_parity:next_state=check_parity_error;
+    check_parity_error:
+      begin
+      if(fifo_full)
+      next_state=fifo_full_state;
+    else if(!fifo_full)
+      next_state=decode_address;
+      end
+  endcase
+    end
+  assign busy=(present_state==load_data || present_state==decode_address)?0:1;
+  assign detect_add=(present_state==decode_address)?1:0;
+  assign ld_state=(present_state==load_data)?1:0;
+  assign laf_state=(present_state==load_after_full)?1:0;
+  assign full_state=(present_state==fifo_full_state)?1:0;
+  assign lfd_state=(present_state==load_first_data)?1:0;
+  assign rst_int_reg=(present_state==check_parity_error)?1:0;
+  assign wr_enb_reg=(present_state==load_data || present_state==load_parity || present_state==load_after_full)?1:0;
+endmodule
