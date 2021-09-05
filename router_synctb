@@ -1,0 +1,66 @@
+/********************************************************************************************
+NAME       :SUHAIL AHAMED S
+DESIGN NAME:ROUTER 1X3
+DATE       :22/07/2021
+DESCRIPTION:SYNCHRONIZER TB
+*********************************************************************************************/
+module router_sync_tb();
+  reg clock,resetn,detect_add,wrenb_reg;
+  reg [1:0]datain;
+  reg rdenb0,rdenb1,rdenb2;
+  reg empty0,empty1,empty2,full0,full1,full2;
+  wire vldout0,vldout1,vldout2;
+  wire softrst0,softrst1,softrst2;
+  wire [3:0]wrenb;
+  wire fifo_full;
+   reg [4:0]count0,count1,count2;
+  reg[1:0]temp;
+  router_sync a(clock,resetn,detect_add,datain,wrenb_reg,vldout0,vldout1,vldout2,rdenb0,rdenb1,rdenb2,wrenb,fifo_full,empty0,empty1,empty2,full0,full1,full2,softrst0,softrst1,softrst2);
+   initial
+    begin
+      clock=0;
+      forever #10 clock=~clock;
+    end
+  initial
+    begin
+      $dumpfile("router_sync_tb.vcd");
+      $dumpvars(0,router_sync_tb);
+    end
+  task rst();
+      begin
+         resetn=1'b1;
+        @(negedge clock)
+        resetn=1'b0;
+        @(negedge clock)
+        resetn=1'b1;
+      end
+  endtask
+    task task1();
+	begin
+		
+		detect_add=1'b1;
+		datain=2'b10;
+		rdenb0=1'b0;
+		rdenb1=1'b1;
+		rdenb2=1'b0;
+		wrenb_reg=1'b1;
+		full0=1'b0;
+		full1=1'b1;
+		full2=1'b1;
+		empty0=1'b1;
+		empty1=1'b0;
+		empty2=1'b0;
+	
+	end
+endtask
+	
+	initial 
+		begin
+			rst;
+			#5;
+			task1();
+			#1000;
+			$finish;
+		end
+		endmodule
+		
